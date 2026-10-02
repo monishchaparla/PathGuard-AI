@@ -1,0 +1,11 @@
+# PathGuard-AI — Pothole Detection Dataset
+# Source: Roboflow (brad-dwyer/pothole-voxrl v1, ODbL v1.0)
+# 665 annotated images: 465 train / 133 val / 67 test
+
+path: data/Pothole.v1-raw.yolov8
+train: train/images
+val: valid/images
+test: test/images
+
+nc: 1
+names: ['pothole']

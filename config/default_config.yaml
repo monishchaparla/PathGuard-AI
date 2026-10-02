@@ -1,0 +1,106 @@
+camera:
+  resolution: [1920, 1080]
+  focal_length_mm: 4.0
+  sensor_height_mm: 3.6
+  sensor_width_mm: 4.8
+  mount_height_cm: 130
+  distortion_coeffs: [-0.2, 0.1, 0.0, 0.0]
+  fps: 30
+
+detection:
+  min_contour_area_px: 500
+  max_contour_area_px: 50000
+  aspect_ratio_min: 0.5
+  aspect_ratio_max: 2.5
+  depth_min_cm: 1.5
+  depth_max_cm: 30.0
+  severity_depth_threshold_cm: 5.0
+  severity_imu_threshold_g: 2.5
+  q_score_area_weight: 0.3
+  q_score_laplacian_weight: 0.7
+
+h3:
+  corridor_resolution: 11
+  defect_resolution: 12
+  kring_k: 1
+  dedup_radius_m: 3.0
+  pentagon_fallback_radius_m: 15.0
+
+database:
+  host: localhost
+  port: 5432
+  name: pathguard
+  user: pathguard
+  password: pathguard_dev
+  schema: public
+
+dlp:
+  bituminous_pavement_days: 1825
+  concrete_pavement_days: 3650
+  overlay_renewal_days: 1095
+  cpwd_civil_works_days: 365
+  pmgsy_rural_days: 1825
+  esal_overload_threshold: 1.5
+
+notice:
+  cure_period_business_days: 14
+  sor_rate_bituminous_per_m3: 8500
+  retention_percentage_min: 2.5
+  retention_percentage_max: 5.0
+  smtp_server: smtp.gmail.com
+  smtp_port: 587
+
+dashboard:
+  map_style: mapbox://styles/mapbox/dark-v10
+  hex_elevation_scale: 20
+  hex_opacity: 0.6
+
+gpu:
+  device: 0
+  fp16: true
+  tensorrt: true
+  memory_fraction: 0.85
+
+training:
+  model_size: yolov8s
+  epochs: 100
+  batch_size: 16
+  image_size: 640
+  patience: 20
+  pretrained: true
+  optimizer: AdamW
+  lr0: 0.001
+  amp: true
+  mosaic: 1.0
+  mixup: 0.1
+  save_dir: runs/train
+
+depth_estimation:
+  model_type: DPT_Hybrid
+  fallback_to_intensity: true
+  depth_min_cm: 1.5
+  depth_max_cm: 30.0
+  calibration_frames: 10
+
+auto_annotation:
+  confidence_threshold: 0.3
+  min_area_px: 500
+  max_area_px: 50000
+  use_sam: false
+
+dataset:
+  base_dir: data/road_defects
+  frame_extraction_fps: 2.0
+  train_ratio: 0.7
+  val_ratio: 0.2
+  test_ratio: 0.1
+  synthetic_samples: 200
+
+classes:
+  - pothole
+  - longitudinal_crack
+  - transverse_crack
+  - alligator_crack
+  - rutting
+  - raveling
+  - patching

@@ -1,0 +1,33 @@
+# Core (keep existing)
+opencv-python-headless>=4.8
+onnxruntime-gpu>=1.16
+h3>=4.0
+psycopg2-binary>=2.9
+sqlalchemy>=2.0
+geoalchemy2>=0.14
+streamlit>=1.28
+pydeck>=0.8
+PyMuPDF>=1.23
+numpy>=1.24
+shapely>=2.0
+geojson>=3.0
+Pillow>=10.0
+pyyaml>=6.0
+
+# ML Training & Inference
+torch>=2.1
+torchvision>=0.16
+ultralytics>=8.1
+albumentations>=1.3
+tensorrt>=10.0;platform_system=="Linux" or platform_system=="Windows"
+
+# Depth Estimation  
+timm>=0.9
+
+# Experiment Tracking
+matplotlib>=3.7
+pandas>=2.0
+scikit-learn>=1.3
+
+# GPS & Sensor
+pyserial>=3.5

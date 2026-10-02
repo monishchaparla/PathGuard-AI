@@ -1,0 +1,60 @@
+# ============================================================
+# PathGuard-AI .gitignore
+# ============================================================
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── Virtual Environments ───────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── IDE / Editor ───────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── ML Artifacts (large, re-generable) ─────────────────────
+*.onnx
+*.engine
+*.trt
+*.pt
+*.pth
+!models/.gitkeep
+runs/
+experiments/
+!runs/.gitkeep
+!experiments/.gitkeep
+
+# ── Data (large, user-specific) ────────────────────────────
+# Keep dataset YAML configs and labels, exclude heavy images
+data/*/train/images/
+data/*/valid/images/
+data/*/test/images/
+captures/
+!data/.gitkeep
+!data/pothole_dataset.yaml
+!captures/.gitkeep
+
+# ── Local Config (secrets, passwords) ──────────────────────
+config/local_config.yaml
+.env
+
+# ── Logs ───────────────────────────────────────────────────
+*.log
+training_*.log
+
+# ── OS Junk ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
