@@ -1,0 +1,8 @@
+# Supabase Cloud Database Configuration
+# Replace these values with the ones from your Supabase Dashboard
+database:
+  host: 'db.xxxxxxxxxxxxx.supabase.co'
+  port: 5432
+  name: 'postgres'
+  user: 'postgres'
+  password: 'YOUR_SUPABASE_PASSWORD'
