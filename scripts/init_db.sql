@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS road_defects (
     contractor_name TEXT,
     contractor_email TEXT,
     road_name TEXT,
+    road_type TEXT,
     dlp_type TEXT,
     dlp_start_date DATE,
     dlp_end_date DATE,
