@@ -26,13 +26,24 @@ h3:
   dedup_radius_m: 3.0
   pentagon_fallback_radius_m: 15.0
 
+# Database: Supabase Cloud (PostgreSQL + PostGIS)
 database:
-  host: localhost
+  provider: 'supabase'
+  # Option 1: Direct Supabase Connection URI (Recommended)
+  # url: 'postgresql+psycopg2://postgres.[YOUR-PROJECT-REF]:[YOUR-PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres?sslmode=require'
+  
+  # Option 2: Parameter breakdown
+  host: 'db.xxxxxxxxxxxxx.supabase.co'
   port: 5432
-  name: pathguard
-  user: pathguard
-  password: pathguard_dev
-  schema: public
+  name: 'postgres'
+  user: 'postgres'
+  password: 'YOUR_SUPABASE_PASSWORD'
+  sslmode: 'require'
+  schema: 'public'
+  
+  # Option 3: Supabase REST API (for Python SDK)
+  supabase_url: 'https://[YOUR-PROJECT-REF].supabase.co'
+  supabase_key: 'YOUR_SUPABASE_ANON_OR_SERVICE_KEY'
 
 dlp:
   bituminous_pavement_days: 1825

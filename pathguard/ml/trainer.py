@@ -95,7 +95,7 @@ class PathGuardTrainer:
             workers=self.config.workers,
             patience=self.config.patience,
             project=self.config.save_dir,
-            amp=self.config.amp,
+            amp=False,
             optimizer=self.config.optimizer,
             lr0=self.config.lr0,
             lrf=self.config.lrf,

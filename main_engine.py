@@ -127,17 +127,21 @@ class PathGuardEngine:
             from pathguard.database import DatabaseEngine
             db_cfg = self.config.get('database', {})
             self.db = DatabaseEngine(
-                host=db_cfg.get('host', 'localhost'),
+                host=db_cfg.get('host'),
                 port=db_cfg.get('port', 5432),
-                dbname=db_cfg.get('name', 'pathguard'),
-                user=db_cfg.get('user', 'pathguard'),
-                password=db_cfg.get('password', 'pathguard_dev'),
+                dbname=db_cfg.get('name', 'postgres'),
+                user=db_cfg.get('user', 'postgres'),
+                password=db_cfg.get('password', ''),
+                url=db_cfg.get('url'),
+                sslmode=db_cfg.get('sslmode', 'require'),
+                supabase_url=db_cfg.get('supabase_url'),
+                supabase_key=db_cfg.get('supabase_key'),
             )
             self.db_connected = self.db.connect()
             if self.db_connected:
-                logger.info("PostGIS database connected ✓")
+                logger.info("Database (Supabase / PostgreSQL) connected ✓")
             else:
-                logger.warning("PostGIS connection returned False — demo mode")
+                logger.warning("Database connection returned False — fallback to demo mode")
             return self.db_connected
         except Exception as exc:
             logger.warning(f"Database unavailable ({exc}). Running in demo mode.")

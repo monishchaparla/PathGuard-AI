@@ -2,7 +2,12 @@
 # Run: powershell -ExecutionPolicy Bypass -File scripts/setup_gpu.ps1
 
 $ErrorActionPreference = "Stop"
-$PYTHON = "C:\Users\chapa\.local\bin\python3.14.exe"
+
+# Use Python 3.11 explicitly to avoid "Preparing metadata" compilation hangs on 3.14
+$PYTHON = "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe"
+if (-Not (Test-Path $PYTHON)) {
+    $PYTHON = "python" # fallback
+}
 
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "  PathGuard-AI GPU Environment Setup" -ForegroundColor Cyan
@@ -48,7 +53,7 @@ print(f'  PyTorch Version: {torch.__version__}')
 print(f'  CUDA Available: {torch.cuda.is_available()}')
 if torch.cuda.is_available():
     print(f'  GPU: {torch.cuda.get_device_name(0)}')
-    print(f'  VRAM: {torch.cuda.get_device_properties(0).total_mem / 1024**3:.1f} GB')
+    print(f'  VRAM: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB')
     print(f'  CUDA Version: {torch.version.cuda}')
     # Quick benchmark
     import time

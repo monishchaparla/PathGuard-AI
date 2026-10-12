@@ -30,6 +30,8 @@ class RoadDefect(Base):
     best_q_score = Column(Float, nullable=False)
     best_image_path = Column(Text)
     imu_az_g = Column(Float)
+    road_name = Column(Text, nullable=True)
+    road_type = Column(Text, nullable=True)
     status = Column(Text, nullable=False, default='OPEN')
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
     updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -55,15 +57,48 @@ class Contract(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class DatabaseEngine:
-    def __init__(self, host, port, dbname, user, password):
-        self.db_url = f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{dbname}"
-        self.engine = create_engine(self.db_url)
+    def __init__(
+        self,
+        host: Optional[str] = None,
+        port: int = 5432,
+        dbname: str = "postgres",
+        user: str = "postgres",
+        password: str = "",
+        url: Optional[str] = None,
+        sslmode: str = "require",
+        supabase_url: Optional[str] = None,
+        supabase_key: Optional[str] = None,
+    ):
+        if url:
+            if url.startswith("postgresql://") and not url.startswith("postgresql+psycopg2://"):
+                self.db_url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            else:
+                self.db_url = url
+        else:
+            host_val = host or "localhost"
+            ssl_suffix = f"?sslmode={sslmode}" if sslmode else ""
+            self.db_url = f"postgresql+psycopg2://{user}:{password}@{host_val}:{port}/{dbname}{ssl_suffix}"
+
+        self.engine = create_engine(self.db_url, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(bind=self.engine)
-        
+
+        self.supabase = None
+        if supabase_url and supabase_key:
+            try:
+                from supabase import create_client
+                self.supabase = create_client(supabase_url, supabase_key)
+                logger.info("Supabase REST client initialized successfully ✓")
+            except Exception as e:
+                logger.warning(f"Could not initialize Supabase SDK client: {e}")
+
     def connect(self) -> bool:
         try:
             with self.engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
+            try:
+                Base.metadata.create_all(self.engine)
+            except Exception as e:
+                logger.debug(f"Table verification: {e}")
             return True
         except Exception as e:
             logger.error(f"Connection failed: {e}")
@@ -121,7 +156,8 @@ class DatabaseEngine:
 
     def create_new_ticket(self, ticket_id: str, h3_res11: str, h3_res12: str, lat: float, lon: float, 
                           width_cm: float, length_cm: float, depth_cm: float, volume_m3: float, 
-                          severity: str, q_score: float, image_path: str, imu_az_g: Optional[float] = None) -> dict:
+                          severity: str, q_score: float, image_path: str, imu_az_g: Optional[float] = None,
+                          road_name: Optional[str] = None, road_type: Optional[str] = None) -> dict:
         try:
             with self.SessionLocal() as session:
                 new_defect = RoadDefect(
@@ -136,7 +172,9 @@ class DatabaseEngine:
                     severity=severity,
                     best_q_score=q_score,
                     best_image_path=image_path,
-                    imu_az_g=imu_az_g
+                    imu_az_g=imu_az_g,
+                    road_name=road_name,
+                    road_type=road_type
                 )
                 
                 history_entry = TicketHistory(
@@ -146,7 +184,7 @@ class DatabaseEngine:
                     q_score=q_score,
                     depth_cm=depth_cm,
                     image_path=image_path,
-                    detection_data={"initial_creation": True},
+                    detection_data={"initial_creation": True, "road_name": road_name, "road_type": road_type},
                     timestamp=datetime.utcnow()
                 )
                 
@@ -188,7 +226,9 @@ class DatabaseEngine:
                 severity=detection_data.get('severity', 'UNKNOWN'),
                 q_score=detection_data.get('q_score', 0.0),
                 image_path=detection_data.get('image_path', ''),
-                imu_az_g=detection_data.get('imu_az_g')
+                imu_az_g=detection_data.get('imu_az_g'),
+                road_name=detection_data.get('road_name'),
+                road_type=detection_data.get('road_type')
             )
 
     def find_contract_for_location(self, h3_res11: str) -> Optional[dict]:

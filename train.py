@@ -67,7 +67,7 @@ def check_environment():
             status['gpu'] = True
             status['gpu_name'] = torch.cuda.get_device_name(0)
             status['vram_gb'] = round(
-                torch.cuda.get_device_properties(0).total_mem / 1024**3, 1
+                torch.cuda.get_device_properties(0).total_memory / 1024**3, 1
             )
             status['cuda_version'] = torch.version.cuda
             print(f"  ✅ PyTorch {torch.__version__} with CUDA {torch.version.cuda}")
@@ -314,7 +314,7 @@ def cmd_full_pipeline(args):
     model_size = args.model or 'yolov8s'
     train_args = argparse.Namespace(
         model=model_size,
-        dataset='data/road_defects/dataset.yaml',
+        dataset='data/pothole_dataset.yaml',
         epochs=args.epochs or 50,
         batch_size=args.batch_size or (16 if env.get('gpu') else 4),
         imgsz=640,

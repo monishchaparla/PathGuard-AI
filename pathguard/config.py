@@ -1,6 +1,12 @@
 import os
 import yaml
 
+try:
+    from dotenv import load_dotenv
+    HAS_DOTENV = True
+except ImportError:
+    HAS_DOTENV = False
+
 class AttrDict(dict):
     """A dictionary that allows for attribute-style access."""
     def __init__(self, *args, **kwargs):
@@ -17,6 +23,11 @@ class ConfigLoader:
 
     def _load_config(self):
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        # Load .env file if present
+        env_path = os.path.join(base_dir, '.env')
+        if os.path.exists(env_path) and HAS_DOTENV:
+            load_dotenv(env_path)
         
         # Load default config
         default_config_path = os.path.join(base_dir, 'config', 'default_config.yaml')
@@ -68,6 +79,53 @@ class ConfigLoader:
                         current[parts[-1]] = float(value)
                     except ValueError:
                         current[parts[-1]] = value
+
+        # Direct Supabase and Database environment variable mappings
+        if 'database' not in self.config:
+            self.config['database'] = {}
+            
+        db = self.config['database']
+        if os.getenv('SUPABASE_URL'):
+            db['supabase_url'] = os.getenv('SUPABASE_URL')
+        if os.getenv('SUPABASE_KEY'):
+            db['supabase_key'] = os.getenv('SUPABASE_KEY')
+        elif os.getenv('SUPABASE_ANON_KEY'):
+            db['supabase_key'] = os.getenv('SUPABASE_ANON_KEY')
+        elif os.getenv('SUPABASE_SERVICE_ROLE_KEY'):
+            db['supabase_key'] = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
+            
+        if os.getenv('DATABASE_URL'):
+            db['url'] = os.getenv('DATABASE_URL')
+        elif os.getenv('SUPABASE_DB_URL'):
+            db['url'] = os.getenv('SUPABASE_DB_URL')
+            
+        if os.getenv('DATABASE_HOST'):
+            db['host'] = os.getenv('DATABASE_HOST')
+        elif os.getenv('SUPABASE_DB_HOST'):
+            db['host'] = os.getenv('SUPABASE_DB_HOST')
+            
+        if os.getenv('DATABASE_PORT'):
+            db['port'] = int(os.getenv('DATABASE_PORT'))
+        elif os.getenv('SUPABASE_DB_PORT'):
+            db['port'] = int(os.getenv('SUPABASE_DB_PORT'))
+            
+        if os.getenv('DATABASE_PASSWORD'):
+            db['password'] = os.getenv('DATABASE_PASSWORD')
+        elif os.getenv('SUPABASE_DB_PASSWORD'):
+            db['password'] = os.getenv('SUPABASE_DB_PASSWORD')
+            
+        if os.getenv('DATABASE_USER'):
+            db['user'] = os.getenv('DATABASE_USER')
+        elif os.getenv('SUPABASE_DB_USER'):
+            db['user'] = os.getenv('SUPABASE_DB_USER')
+            
+        if os.getenv('DATABASE_NAME'):
+            db['name'] = os.getenv('DATABASE_NAME')
+        elif os.getenv('SUPABASE_DB_NAME'):
+            db['name'] = os.getenv('SUPABASE_DB_NAME')
+            
+        if os.getenv('DATABASE_SSLMODE'):
+            db['sslmode'] = os.getenv('DATABASE_SSLMODE')
 
 _config_instance = None
 

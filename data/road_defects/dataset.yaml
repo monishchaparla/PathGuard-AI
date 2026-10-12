@@ -1,0 +1,6 @@
+path: C:/Users/chapa/Downloads/PATH_GUARD/data/road_defects
+train: images/train
+val: images/val
+test: images/test
+nc: 7
+names: ['pothole', 'longitudinal_crack', 'transverse_crack', 'alligator_crack', 'rutting', 'raveling', 'patching']

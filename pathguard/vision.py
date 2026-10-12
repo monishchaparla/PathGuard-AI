@@ -462,7 +462,7 @@ class EnhancedVisionPipeline:
         # Step 3: Enrich each detection with geometry and depth
         enriched = []
         geom = self.base_pipeline.geometry
-        imu_fusion = self.base_pipeline.imu_fusion
+        imu_fusion = self.base_pipeline.fusion
         
         for det in detections:
             x, y, w, h = det['bbox']
