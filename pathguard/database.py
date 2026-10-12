@@ -69,6 +69,7 @@ class DatabaseEngine:
         supabase_url: Optional[str] = None,
         supabase_key: Optional[str] = None,
     ):
+        import urllib.parse
         if url:
             if url.startswith("postgresql://") and not url.startswith("postgresql+psycopg2://"):
                 self.db_url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
@@ -76,8 +77,10 @@ class DatabaseEngine:
                 self.db_url = url
         else:
             host_val = host or "localhost"
+            safe_password = urllib.parse.quote_plus(str(password))
+            safe_user = urllib.parse.quote_plus(str(user))
             ssl_suffix = f"?sslmode={sslmode}" if sslmode else ""
-            self.db_url = f"postgresql+psycopg2://{user}:{password}@{host_val}:{port}/{dbname}{ssl_suffix}"
+            self.db_url = f"postgresql+psycopg2://{safe_user}:{safe_password}@{host_val}:{port}/{dbname}{ssl_suffix}"
 
         self.engine = create_engine(self.db_url, pool_pre_ping=True)
         self.SessionLocal = sessionmaker(bind=self.engine)
