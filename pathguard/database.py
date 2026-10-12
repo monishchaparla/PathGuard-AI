@@ -105,13 +105,13 @@ class DatabaseEngine:
             return False
 
     def find_nearby_defect(self, lon: float, lat: float, radius_m: float = 3.0) -> Optional[dict]:
-        query = text(\"\"\"
+        query = text("""
             SELECT ticket_id, best_q_score, depth_cm, width_cm, length_cm, severity
             FROM road_defects
             WHERE ST_DWithin(geom, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography, :radius)
             ORDER BY ST_Distance(geom, ST_SetSRID(ST_MakePoint(:lon, :lat), 4326)::geography)
             LIMIT 1;
-        \"\"\")
+        """)
         try:
             with self.SessionLocal() as session:
                 result = session.execute(query, {"lon": lon, "lat": lat, "radius": radius_m}).fetchone()
