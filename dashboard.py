@@ -1,8 +1,12 @@
-"""PathGuard-AI Live In-Car & Assessment Dashboard (Bharat Edition).
+"""PathGuard-AI Live In-Car & Infrastructure Assessment Dashboard (Bharat Edition).
 
-Streamlit + Pydeck dashboard showing real-time camera overlays,
-video upload analysis, 3D H3 spatial grids, Supabase cloud sync,
-road type classifications, and statutory eMARG notices.
+Streamlit + Pydeck dashboard showing:
+- Real-time camera overlays and video upload analysis
+- Live Web Road Detection from OpenStreetMap (Reverse Geocoding)
+- Lat/Lon Input & Preset Highway auto-detection
+- Automated Contractor & eMARG DLP Contract Matching
+- Live Supabase cloud database synchronization with PostGIS spatial deduplication
+- 3D Uber H3 hexagonal spatial grids and automated statutory liability notices
 """
 import streamlit as st
 import pydeck as pdk
@@ -23,8 +27,9 @@ from pathguard.config import get_config
 from pathguard.vision import EnhancedVisionPipeline
 from pathguard.spatial import H3Engine
 from pathguard.notices import estimate_repair_cost
-from pathguard.gps_relay import SimulatedGPS
+from pathguard.gps_relay import SimulatedGPS, GPSFix
 from pathguard.database import DatabaseEngine
+from pathguard.geocoding import resolve_road_from_web
 
 st.set_page_config(
     page_title='PathGuard-AI (Bharat Edition)',
@@ -174,21 +179,71 @@ with st.sidebar.expander("🔑 Supabase Credentials Settings", expanded=not st.s
         else:
             st.error("Connection failed. Check host, password, or URI.")
 
-# 2. Road Assessment Specifications
+# 2. GPS & Live Web Road Detection Panel
 st.sidebar.markdown("---")
-st.sidebar.subheader("🛣️ Road & DLP Assessment")
-road_name = st.sidebar.text_input("Road / Corridor Name", value="NH-48 Delhi-Gurugram Expressway")
-road_type = st.sidebar.selectbox(
-    "Pavement / Road Type",
-    [
-        "Flexible Bituminous Asphalt (MoRTH / IRC:37 - 5-Yr DLP)",
-        "Rigid Cement Concrete (IRC:58 - 10-Yr DLP)",
-        "PMGSY Rural Road (IRC:SP:20 - 5-Yr DLP / eMARG Audit)",
-        "Municipal Urban Road (CPWD Standard - 1-Yr DLP)"
-    ]
+st.sidebar.subheader("📍 GPS & Web Road Detection")
+
+gps_mode = st.sidebar.radio(
+    "Location & Geocoding Mode",
+    ["🌐 Custom / Preset Lat-Lon (Web Auto-Detect)", "🚗 Live Highway Drive Simulation"]
 )
-contractor_id = st.sidebar.text_input("Contractor ID (eMARG / NHAI)", value="NHAI-2023-45")
-sor_rate = st.sidebar.number_input("Schedule of Rates (SOR ₹/m³)", value=3500, step=500)
+
+# Preset Coordinates for Major Indian Corridors
+HIGHWAY_PRESETS = {
+    "NH-48 Delhi-Gurugram Expressway": (28.4975, 77.0865),
+    "NH-44 Bengaluru Silk Board / Hosur Rd": (12.9172, 77.6229),
+    "Mumbai-Pune Expressway": (18.7557, 73.4116),
+    "PVNR Elevated Expressway Hyderabad": (17.3616, 78.4378),
+    "Eastern Peripheral Expressway (NCR)": (28.5921, 77.4988),
+    "Custom GPS Coordinates...": (28.4595, 77.0266)
+}
+
+if "selected_lat" not in st.session_state:
+    st.session_state.selected_lat = 28.4975
+if "selected_lon" not in st.session_state:
+    st.session_state.selected_lon = 77.0865
+if "web_road_info" not in st.session_state:
+    st.session_state.web_road_info = resolve_road_from_web(st.session_state.selected_lat, st.session_state.selected_lon)
+
+if gps_mode == "🌐 Custom / Preset Lat-Lon (Web Auto-Detect)":
+    chosen_preset = st.sidebar.selectbox("Highway / Location Preset", list(HIGHWAY_PRESETS.keys()))
+    if chosen_preset != "Custom GPS Coordinates...":
+        preset_lat, preset_lon = HIGHWAY_PRESETS[chosen_preset]
+        st.session_state.selected_lat = preset_lat
+        st.session_state.selected_lon = preset_lon
+
+    col_lat, col_lon = st.sidebar.columns(2)
+    with col_lat:
+        input_lat = st.number_input("Latitude", value=float(st.session_state.selected_lat), format="%.5f", step=0.0001)
+    with col_lon:
+        input_lon = st.number_input("Longitude", value=float(st.session_state.selected_lon), format="%.5f", step=0.0001)
+
+    st.session_state.selected_lat = input_lat
+    st.session_state.selected_lon = input_lon
+
+    if st.sidebar.button("🌐 Detect Road & Contractor from Web"):
+        with st.sidebar.spinner("Querying live OpenStreetMap API..."):
+            st.session_state.web_road_info = resolve_road_from_web(input_lat, input_lon)
+            st.sidebar.success(f"Detected: {st.session_state.web_road_info['road_name']}")
+
+# Use live web information
+web_info = st.session_state.web_road_info
+road_name = web_info['road_name']
+road_type = web_info['pavement_type']
+contractor_name = web_info['contractor_name']
+contractor_id = web_info['contract_id']
+contractor_email = web_info['contractor_email']
+dlp_expiry = web_info['dlp_expiry']
+sor_rate = web_info['sor_rate']
+
+with st.sidebar.expander("🏢 Auto-Resolved Contract & Contractor", expanded=True):
+    st.markdown(f"**Road:** `{road_name}`")
+    st.markdown(f"**Jurisdiction:** `{web_info.get('city', '')}, {web_info.get('state', '')}`")
+    st.markdown(f"**Pavement:** `{road_type}`")
+    st.markdown(f"**Contractor:** `{contractor_name}`")
+    st.markdown(f"**Contract ID:** `{contractor_id}`")
+    st.markdown(f"**DLP Expiry:** `{dlp_expiry}`")
+    st.caption(f"Source: {web_info.get('source', 'Live Web')}")
 
 # 3. Camera Source & Upload Feature
 st.sidebar.markdown("---")
@@ -205,7 +260,13 @@ sensitivity = st.sidebar.slider("AI Sensitivity Threshold", 0.1, 1.0, 0.4)
 
 # ── Main Layout ───────────────────────────────────────────────────────────────
 st.title("🛺 PathGuard-AI: Live Windshield & Infrastructure Assessment")
-st.markdown(f"**Assessing:** `{road_name}` &nbsp;|&nbsp; **Classification:** `{road_type}` &nbsp;|&nbsp; **Contractor:** `{contractor_id}`")
+
+# Live Road & Contract Banner
+st.info(f"""
+🌐 **Live Detected Road (OpenStreetMap):** `{road_name}` ({web_info.get('city', '')}, {web_info.get('state', '')}) &nbsp;|&nbsp; 
+**Classification:** `{road_type}` &nbsp;|&nbsp; 
+**Assigned Contractor:** `{contractor_name}` (`{contractor_id}`)
+""")
 
 col_feed, col_map = st.columns([0.58, 0.42])
 
@@ -263,6 +324,10 @@ def run_assessment_loop(video_file=None):
     frame_count = 0
     start_time = time.time()
     
+    # Base location
+    base_lat = st.session_state.selected_lat
+    base_lon = st.session_state.selected_lon
+
     while True:
         frame = None
         if cap and cap.isOpened():
@@ -278,7 +343,18 @@ def run_assessment_loop(video_file=None):
 
         frame_count += 1
         fps = frame_count / max(0.001, time.time() - start_time)
-        fix = st.session_state.gps.get_latest()
+
+        # Coordinate resolution
+        if gps_mode == "🚗 Live Highway Drive Simulation":
+            sim_fix = st.session_state.gps.get_latest()
+            current_lat = sim_fix.latitude
+            current_lon = sim_fix.longitude
+            speed_val = sim_fix.speed_kmh if hasattr(sim_fix, 'speed_kmh') else 48.0
+        else:
+            # Advance slightly along road trajectory for realistic multi-pothole mapping
+            current_lat = base_lat + (frame_count * 0.00003)
+            current_lon = base_lon + (frame_count * 0.00003)
+            speed_val = 45.0 + (frame_count % 6) * 0.5
 
         # Run enhanced vision pipeline
         st.session_state.vision.base_pipeline.conf_threshold = sensitivity
@@ -299,7 +375,7 @@ def run_assessment_loop(video_file=None):
             vol_m3, cost_inr = estimate_repair_cost(w_cm, l_cm, d_cm, sor_rate)
 
             # Spatial resolution via Uber H3
-            cell = st.session_state.h3.resolve(fix.latitude, fix.longitude)
+            cell = st.session_state.h3.resolve(current_lat, current_lon)
 
             # Severity Color Palette (Bharat Saffron / Red / Green)
             color = (19, 136, 8)  # Green
@@ -360,10 +436,11 @@ def run_assessment_loop(video_file=None):
                 'Cost (₹)': f"₹{int(cost_inr):,}",
                 'H3-Index': cell.res12,
                 'Corridor': cell.res11,
-                'Road Type': road_type.split('(')[0].strip(),
+                'Road Name': road_name,
+                'Contractor': contractor_name,
                 'Supabase Sync': db_status_txt,
-                'Lat': fix.latitude,
-                'Lon': fix.longitude
+                'Lat': current_lat,
+                'Lon': current_lon
             }
 
             if vol_m3 > 0.0005:
@@ -373,17 +450,18 @@ def run_assessment_loop(video_file=None):
         frame_placeholder.image(frame_rgb, channels="RGB", use_column_width=True)
 
         # GPS & Telemetry Card
-        speed_est = 42.0 + (frame_count % 8) * 0.5
         telemetry_placeholder.markdown(f"""
-        **🛰️ Live Telemetry:** Speed: `{speed_est:.1f} km/h` &nbsp;|&nbsp; Lat: `{fix.latitude:.5f}` &nbsp;|&nbsp; Lon: `{fix.longitude:.5f}` &nbsp;|&nbsp; Processing: `{fps:.1f} FPS`
+        **🛰️ Live Telemetry:** Speed: `{speed_val:.1f} km/h` &nbsp;|&nbsp; Lat: `{current_lat:.5f}` &nbsp;|&nbsp; Lon: `{current_lon:.5f}` &nbsp;|&nbsp; Processing: `{fps:.1f} FPS`
         """)
 
         gps_info_placeholder.info(f"""
-        **📍 Spatial Coordinates & Pavement Status:**
-        - **Corridor Index (H3 Res 11):** `{st.session_state.h3.resolve(fix.latitude, fix.longitude).res11}`
-        - **Defect Hexagon (H3 Res 12):** `{st.session_state.h3.resolve(fix.latitude, fix.longitude).res12}`
-        - **Pavement Type:** {road_type}
-        - **Active Contractor:** {contractor_id}
+        **📍 Web-Detected Infrastructure & Spatial Status:**
+        - **Live Road:** {road_name} ({web_info.get('city', '')}, {web_info.get('state', '')})
+        - **Corridor Index (H3 Res 11):** `{st.session_state.h3.resolve(current_lat, current_lon).res11}`
+        - **Defect Hexagon (H3 Res 12):** `{st.session_state.h3.resolve(current_lat, current_lon).res12}`
+        - **Pavement Standard:** {road_type}
+        - **Auto-Assigned Contractor:** {contractor_name} (`{contractor_id}`)
+        - **Statutory DLP Expiry:** `{dlp_expiry}`
         """)
 
         if current_defects:
@@ -394,8 +472,8 @@ def run_assessment_loop(video_file=None):
         map_data = pd.DataFrame(st.session_state.history)
         if not map_data.empty:
             view_state = pdk.ViewState(
-                latitude=fix.latitude,
-                longitude=fix.longitude,
+                latitude=current_lat,
+                longitude=current_lon,
                 zoom=16,
                 pitch=50
             )
@@ -432,19 +510,22 @@ def run_assessment_loop(video_file=None):
             if latest['Severity'] in ['HIGH', 'CRITICAL']:
                 ticket_content.markdown(f"""
                 ### ⚖️ STATUTORY LIABILITY NOTICE (Clause 17 - {road_type.split('(')[0].strip()})
-                **TO CONTRACTOR:** `{contractor_id}`  
-                **CORRIDOR:** `{road_name}`  
+                **TO CONTRACTOR:** `{contractor_name}` (`{contractor_id}`)  
+                **CONTRACTOR EMAIL:** `{contractor_email}`  
+                **CORRIDOR:** `{road_name}` ({web_info.get('city', '')}, {web_info.get('state', '')})  
                 **DEFECT CLASSIFICATION:** `{latest['Defect']}` ({latest['Severity']} SEVERITY)
                 
                 *   **Occurrence Timestamp:** `{latest['Time']}`
                 *   **Uber H3 Spatial Hex:** `{latest['H3-Index']}` (Corridor Sector: `{latest['Corridor']}`)
+                *   **GPS Coordinates:** `Lat {current_lat:.5f}, Lon {current_lon:.5f}`
                 *   **Physical Defect Depth:** `{latest['Depth (cm)']} cm`
                 *   **Estimated Volume:** `{latest['Volume (m³)']} m³`
                 *   **MoRTH SOR Schedule Rate:** `{latest['Cost (₹)']}`
                 *   **Supabase Cloud Sync Status:** `{latest['Supabase Sync']}`
+                *   **DLP Expiry Deadline:** `{dlp_expiry}`
                 
                 **STATUTORY DIRECTIVE:**  
-                Rectification must be initiated within **14 Business Days**. Default invokes third-party execution against the contractor's performance guarantee escrow.
+                Under Clause 17 of the Standard EPC Agreement, rectification must be completed within **14 Business Days**. Default authorizes the Supervising Authority to execute repairs at the contractor's risk against performance bank guarantees.
                 """)
 
     if cap:
@@ -460,4 +541,4 @@ st.sidebar.markdown("---")
 if st.sidebar.button("▶ START AI ASSESSMENT"):
     run_assessment_loop(uploaded_video)
 else:
-    st.info("👈 Configure your road settings in the sidebar and click **'START AI ASSESSMENT'**.")
+    st.info("👈 Configure your road or GPS settings in the sidebar and click **'START AI ASSESSMENT'**.")
